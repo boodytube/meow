@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Glowing Heart — HTML + CSS + JS</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --heart-color:#ff4d6d;
+      --glow-color:  rgba(255,77,109,0.9);
+      --size: 220px;
+    }
+
+    /* Page layout */
+    html,body{height:100%;}
+    body{
+      margin:0;
+      display:grid;
+      place-items:center;
+      background: radial-gradient(circle at 10% 10%, #0b1220 0%, var(--bg) 55%);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      color: #e6eef8;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    .wrap{
+      text-align:center;
+      display:flex;
+      gap:2rem;
+      align-items:center;
+      flex-direction:column;
+    }
+
+    /* Heart container */
+    .heart {
+      width:var(--size);
+      height:var(--size);
+      display:inline-block;
+      cursor:pointer;
+      transition:transform .2s ease;
+    }
+
+    /* Make the heart responsive */
+    @media (max-width:420px){
+      :root{--size:140px}
+    }
+
+    /* SVG styling: fill and glow animation */
+    .heart svg{
+      width:100%;
+      height:100%;
+      display:block;
+      transform-origin:50% 50%;
+      filter: drop-shadow(0 0 8px rgba(0,0,0,0.25));
+    }
+
+    /* The glowing pulse animation: scales + soft multi-layered shadow */
+    .glow {
+      animation: pulse 1500ms ease-in-out infinite;
+    }
+
+    @keyframes pulse{
+      0%{ transform: scale(1); filter: drop-shadow(0 0 6px rgba(0,0,0,0.25)) drop-shadow(0 0 0px rgba(0,0,0,0)); }
+      35%{ transform: scale(1.06); }
+      50%{ transform: scale(1.12); filter: drop-shadow(0 8px 22px rgba(0,0,0,0.45)) drop-shadow(0 0 30px var(--glow-color)); }
+      100%{ transform: scale(1); }
+    }
+
+    /* Inner glow using an extra SVG blur filter for richer effect */
+    svg .heart-fill{
+      fill:var(--heart-color);
+      transition:fill .25s ease;
+    }
+
+    /* Outline glow (a duplicated path with blur) */
+    svg .glow-outline{
+      fill:var(--heart-color);
+      opacity:0.85;
+      filter:url(#fuzzy);
+    }
+
+    /* Small instruction text */
+    .hint{
+      font-size:0.95rem;
+      opacity:0.75;
+      margin-top:.6rem;
+    }
+
+    /* Controls (color input) */
+    .controls{
+      display:flex;
+      gap:.6rem;
+      align-items:center;
+      margin-top:.6rem;
+    }
+
+    .btn{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.06);
+      color:inherit;
+      padding:.45rem .8rem;
+      border-radius:8px;
+      backdrop-filter: blur(4px);
+      cursor:pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Heart (SVG) -->
+    <button class="heart" id="heartBtn" aria-label="Glowing heart — click to toggle pulse">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="false">
+        <defs>
+          <!-- soft blur filter for extra glow -->
+          <filter id="fuzzy" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </feMerge>
+        </defs>
+
+        <!-- a layered heart: outline glow + fill path -->
+        <!-- glow-outline sits behind and uses the blur filter -->
+        <g transform="translate(0,0)">
+          <path class="glow-outline" d="M50 82L20 55A18 18 0 0 1 20 28c8-12 30-8 30 6 0-14 22-18 30-6a18 18 0 0 1 0 27L50 82z"/>
+          <path class="heart-fill" d="M50 78L24 53A14 14 0 0 1 24 30c6-10 24-6 26 4 2-10 20-14 26-4a14 14 0 0 1 0 20L50 78z"/>
+        </g>
+      </svg>
+    </button>
+
+    <div class="controls">
+      <label for="color">Heart color</label>
+      <input id="color" type="color" value="#ff4d6d" title="Pick heart color">
+      <button class="btn" id="toggleBtn">Toggle Glow</button>
+    </div>
+
+    <div class="hint">Click the heart or press <kbd>Space</kbd> to toggle the glowing pulse. Pick a color to change it.</div>
+  </div>
+
+  <script>
+    // Elements
+    const heartBtn = document.getElementById('heartBtn');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const colorInput = document.getElementById('color');
+    const svgHeartFill = document.querySelector('.heart-fill');
+    const glowOutline = document.querySelector('.glow-outline');
+
+    // State
+    let glowing = true;
+
+    // Initialize: add glow class
+    function setGlow(on){
+      const svg = heartBtn.querySelector('svg');
+      if(on){
+        svg.classList.add('glow');
+        heartBtn.setAttribute('aria-pressed','true');
+        toggleBtn.textContent = 'Turn glow off';
+      } else {
+        svg.classList.remove('glow');
+        heartBtn.setAttribute('aria-pressed','false');
+        toggleBtn.textContent = 'Turn glow on';
+      }
+      glowing = on;
+    }
+
+    // Update color
+    function setColor(hex){
+      // Update CSS variables for glow color too (semi-transparent)
+      document.documentElement.style.setProperty('--heart-color', hex);
+      // derive a semi-transparent glow color
+      const glow = hexToRgba(hex, 0.9);
+      document.documentElement.style.setProperty('--glow-color', glow);
+    }
+
+    // tiny helper: convert #rrggbb to rgba(r,g,b,a)
+    function hexToRgba(hex, a = 1){
+      hex = hex.replace('#','');
+      if(hex.length === 3){ hex = hex.split('').map(c => c + c).join(''); }
+      const n = parseInt(hex,16);
+      const r = (n >> 16) & 255;
+      const g = (n >> 8) & 255;
+      const b = n & 255;
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+
+    // Event bindings
+    heartBtn.addEventListener('click', ()=> setGlow(!glowing));
+    toggleBtn.addEventListener('click', ()=> setGlow(!glowing));
+
+    colorInput.addEventListener('input', (e)=> setColor(e.target.value));
+
+    // keyboard accessibility: space toggles
+    document.addEventListener('keydown', (e)=>{
+      if(e.code === 'Space'){
+        e.preventDefault();
+        setGlow(!glowing);
+      }
+    });
+
+    // set initial color and glow
+    setColor(colorInput.value);
+    setGlow(true);
+
+  </script>
+</body>
+</html>
